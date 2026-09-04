@@ -18,11 +18,13 @@ const app = express();
 
 app.use(express.json());
 
-app.use(express.static(__dirname));
+// Serve the www folder
+
+app.use(express.static(path.join(__dirname, "www")));
 
 app.get("/", (req, res) => {
 
-    res.sendFile(path.join(__dirname, "index.html"));
+    res.sendFile(path.join(__dirname, "www", "index.html"));
 
 });
 
@@ -36,7 +38,7 @@ app.post("/chat", async (req, res) => {
 
     try {
 
-        const message = req.body.message;
+        const { message } = req.body;
 
         if (!message) {
 
@@ -47,8 +49,6 @@ app.post("/chat", async (req, res) => {
             });
 
         }
-
-        console.log("User message:", message);
 
         const result = await ai.models.generateContent({
 
@@ -65,8 +65,6 @@ app.post("/chat", async (req, res) => {
             }
 
         });
-
-        console.log("Gemini response received");
 
         res.json({
 
