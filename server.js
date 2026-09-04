@@ -1,12 +1,12 @@
-import express from 'express';
+import express from "express";
 
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI } from "@google/genai";
 
-import path from 'path';
+import path from "path";
 
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
@@ -18,17 +18,13 @@ const app = express();
 
 app.use(express.json());
 
-// Serve your Max AI website
-
 app.use(express.static(__dirname));
 
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
 
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, "index.html"));
 
 });
-
-// Gemini AI
 
 const ai = new GoogleGenAI({
 
@@ -36,15 +32,27 @@ const ai = new GoogleGenAI({
 
 });
 
-app.post('/chat', async (req, res) => {
+app.post("/chat", async (req, res) => {
 
     try {
 
-        const { message } = req.body;
+        const message = req.body.message;
 
-        const response = await ai.models.generateContent({
+        if (!message) {
 
-            model: 'gemini-2.5-flash',
+            return res.status(400).json({
+
+                response: "Please enter a message."
+
+            });
+
+        }
+
+        console.log("User message:", message);
+
+        const result = await ai.models.generateContent({
+
+            model: "gemini-2.5-flash",
 
             contents: message,
 
@@ -52,25 +60,27 @@ app.post('/chat', async (req, res) => {
 
                 systemInstruction:
 
-                    'You are Max AI, a helpful, precise, and concise AI assistant.'
+                    "You are Max AI, a helpful, precise, and concise AI assistant."
 
             }
 
         });
 
+        console.log("Gemini response received");
+
         res.json({
 
-            response: response.text
+            response: result.text
 
         });
 
     } catch (error) {
 
-        console.error('API Error:', error);
+        console.error("Gemini Error:", error);
 
         res.status(500).json({
 
-            response: 'Sorry, Max AI could not respond right now.'
+            response: "Max AI error: " + error.message
 
         });
 
@@ -82,6 +92,6 @@ const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
 
-    console.log(`Max AI server running on port ${port}`);
+    console.log(`Max AI running on port ${port}`);
 
 });
