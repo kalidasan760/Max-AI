@@ -1,38 +1,62 @@
-// Max AI - Chat
+const form = document.getElementById("chat-form");
 
-const chatForm = document.getElementById("chat-form");
+const input = document.getElementById("user-input");
 
-const userInput = document.getElementById("user-input");
+const chat = document.getElementById("chat-container");
 
-const chatContainer = document.getElementById("chat-container");
-
-chatForm.addEventListener("submit", async (event) => {
+form.addEventListener("submit", async function (event) {
 
     event.preventDefault();
 
-    const message = userInput.value.trim();
+    const message = input.value.trim();
 
     if (!message) return;
 
-    // Show user's message
+    // Show user message
 
-    addMessage(message, "user");
+    const userMessage = document.createElement("div");
 
-    // Clear input
+    userMessage.className = "flex justify-end";
 
-    userInput.value = "";
+    userMessage.innerHTML = `
 
-    // Disable input while Max AI responds
+        <div class="bg-black text-white p-3 rounded-2xl max-w-[80%] text-sm">
 
-    userInput.disabled = true;
+            ${escapeHTML(message)}
 
-    const thinkingMessage = addMessage(
+        </div>
 
-        "Max AI is thinking...",
+    `;
 
-        "ai"
+    chat.appendChild(userMessage);
 
-    );
+    input.value = "";
+
+    input.disabled = true;
+
+    // Show loading message
+
+    const loading = document.createElement("div");
+
+    loading.className = "flex items-start space-x-3";
+
+    loading.innerHTML = `
+
+        <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 shrink-0 text-xs">
+
+            AI
+
+        </div>
+
+        <div class="bg-gray-100 p-3.5 rounded-2xl text-sm text-gray-800">
+
+            Max AI is thinking...
+
+        </div>
+
+    `;
+
+    chat.appendChild(loading);
 
     try {
 
@@ -54,89 +78,15 @@ chatForm.addEventListener("submit", async (event) => {
 
         });
 
-        if (!response.ok) {
-
-            throw new Error(
-
-                `Server error: ${response.status}`
-
-            );
-
-        }
-
         const data = await response.json();
 
-        // Remove "thinking..."
+        loading.remove();
 
-        thinkingMessage.remove();
+        const aiMessage = document.createElement("div");
 
-        if (data.response) {
+        aiMessage.className = "flex items-start space-x-3";
 
-            addMessage(data.response, "ai");
-
-        } else {
-
-            addMessage(
-
-                "Max AI didn't return a response.",
-
-                "ai"
-
-            );
-
-        }
-
-    } catch (error) {
-
-        console.error("Max AI Error:", error);
-
-        thinkingMessage.remove();
-
-        addMessage(
-
-            "Sorry, Max AI couldn't connect to the server.",
-
-            "ai"
-
-        );
-
-    }
-
-    userInput.disabled = false;
-
-    userInput.focus();
-
-});
-
-// Add message to chat
-
-function addMessage(text, type) {
-
-    const wrapper = document.createElement("div");
-
-    if (type === "user") {
-
-        wrapper.className =
-
-            "flex items-start justify-end space-x-3";
-
-        wrapper.innerHTML = `
-
-            <div class="bg-black text-white p-3.5 rounded-2xl max-w-[80%] text-sm">
-
-                ${escapeHTML(text)}
-
-            </div>
-
-        `;
-
-    } else {
-
-        wrapper.className =
-
-            "flex items-start space-x-3";
-
-        wrapper.innerHTML = `
+        aiMessage.innerHTML = `
 
             <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 shrink-0 text-xs">
 
@@ -146,25 +96,51 @@ function addMessage(text, type) {
 
             <div class="bg-gray-100 p-3.5 rounded-2xl max-w-[80%] text-sm text-gray-800">
 
-                ${escapeHTML(text)}
+                ${escapeHTML(data.response || "No response from Max AI.")}
 
             </div>
 
         `;
 
+        chat.appendChild(aiMessage);
+
+    } catch (error) {
+
+        loading.remove();
+
+        const errorMessage = document.createElement("div");
+
+        errorMessage.className = "flex items-start space-x-3";
+
+        errorMessage.innerHTML = `
+
+            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 shrink-0 text-xs">
+
+                AI
+
+            </div>
+
+            <div class="bg-gray-100 p-3.5 rounded-2xl text-sm text-red-600">
+
+                Connection error. Please try again.
+
+            </div>
+
+        `;
+
+        chat.appendChild(errorMessage);
+
+        console.error(error);
+
     }
 
-    chatContainer.appendChild(wrapper);
+    input.disabled = false;
 
-    // Scroll to newest message
+    input.focus();
 
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    chat.scrollTop = chat.scrollHeight;
 
-    return wrapper;
-
-}
-
-// Protect against HTML injection
+});
 
 function escapeHTML(text) {
 
