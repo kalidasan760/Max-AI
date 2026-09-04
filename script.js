@@ -1,75 +1,177 @@
-const chatForm = document.getElementById('chat-form');
-const userInput = document.getElementById('user-input');
-const chatContainer = document.getElementById('chat-container');
+// Max AI - Chat
 
-chatForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+const chatForm = document.getElementById("chat-form");
+
+const userInput = document.getElementById("user-input");
+
+const chatContainer = document.getElementById("chat-container");
+
+chatForm.addEventListener("submit", async (event) => {
+
+    event.preventDefault();
+
     const message = userInput.value.trim();
+
     if (!message) return;
 
-    // Append User Message
-    const userDiv = document.createElement('div');
-    userDiv.className = 'flex items-start space-x-3 justify-end';
-    userDiv.innerHTML = `
-        <div class="bg-black text-white p-3.5 rounded-2xl max-w-[80%] text-sm">${escapeHtml(message)}</div>
-    `;
-    chatContainer.appendChild(userDiv);
-    userInput.value = '';
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    // Show user's message
 
-    // Append AI Loading/Response Bubble
-    const aiDiv = document.createElement('div');
-    aiDiv.className = 'flex items-start space-x-3';
-    aiDiv.innerHTML = `
-        <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 shrink-0 text-xs">AI</div>
-        <div class="bg-gray-100 p-3.5 rounded-2xl max-w-[80%] text-sm text-gray-800 ai-response">Thinking...</div>
-    `;
-    chatContainer.appendChild(aiDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    addMessage(message, "user");
 
-    const responseBubble = aiDiv.querySelector('.ai-response');
+    // Clear input
+
+    userInput.value = "";
+
+    // Disable input while Max AI responds
+
+    userInput.disabled = true;
+
+    const thinkingMessage = addMessage(
+
+        "Max AI is thinking...",
+
+        "ai"
+
+    );
 
     try {
-        const res = await fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message })
+
+        const response = await fetch("/chat", {
+
+            method: "POST",
+
+            headers: {
+
+                "Content-Type": "application/json"
+
+            },
+
+            body: JSON.stringify({
+
+                message: message
+
+            })
+
         });
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let fullText = '';
+        if (!response.ok) {
 
-        responseBubble.textContent = ''; // Clear "Thinking..."
+            throw new Error(
 
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
+                `Server error: ${response.status}`
 
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n\n');
+            );
 
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const data = JSON.parse(line.substring(6));
-                    fullText += data.response;
-                    responseBubble.textContent = fullText;
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                }
-            }
         }
-    } catch (err) {
-        responseBubble.textContent = 'Error connecting to Max AI server.';
+
+        const data = await response.json();
+
+        // Remove "thinking..."
+
+        thinkingMessage.remove();
+
+        if (data.response) {
+
+            addMessage(data.response, "ai");
+
+        } else {
+
+            addMessage(
+
+                "Max AI didn't return a response.",
+
+                "ai"
+
+            );
+
+        }
+
+    } catch (error) {
+
+        console.error("Max AI Error:", error);
+
+        thinkingMessage.remove();
+
+        addMessage(
+
+            "Sorry, Max AI couldn't connect to the server.",
+
+            "ai"
+
+        );
+
     }
+
+    userInput.disabled = false;
+
+    userInput.focus();
+
 });
 
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
+// Add message to chat
+
+function addMessage(text, type) {
+
+    const wrapper = document.createElement("div");
+
+    if (type === "user") {
+
+        wrapper.className =
+
+            "flex items-start justify-end space-x-3";
+
+        wrapper.innerHTML = `
+
+            <div class="bg-black text-white p-3.5 rounded-2xl max-w-[80%] text-sm">
+
+                ${escapeHTML(text)}
+
+            </div>
+
+        `;
+
+    } else {
+
+        wrapper.className =
+
+            "flex items-start space-x-3";
+
+        wrapper.innerHTML = `
+
+            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 shrink-0 text-xs">
+
+                AI
+
+            </div>
+
+            <div class="bg-gray-100 p-3.5 rounded-2xl max-w-[80%] text-sm text-gray-800">
+
+                ${escapeHTML(text)}
+
+            </div>
+
+        `;
+
+    }
+
+    chatContainer.appendChild(wrapper);
+
+    // Scroll to newest message
+
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    return wrapper;
+
+}
+
+// Protect against HTML injection
+
+function escapeHTML(text) {
+
+    const div = document.createElement("div");
+
+    div.textContent = text;
+
+    return div.innerHTML;
+
 }
