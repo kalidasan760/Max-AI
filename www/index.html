@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Max AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-white text-gray-800 h-screen flex flex-col justify-between font-sans m-0">
+
+    <!-- Top Header -->
+    <header class="py-4 border-b border-gray-100 flex flex-col items-center justify-center bg-white">
+        <h1 class="font-bold text-base text-gray-900 m-0">Max AI</h1>
+        <span class="text-xs text-gray-400">How can I help you today?</span>
+    </header>
+
+    <!-- Chat Stream Area -->
+    <main id="chat-container" class="flex-1 overflow-y-auto px-4 py-6 space-y-6 max-w-3xl w-full mx-auto flex flex-col">
+        <div class="flex items-start space-x-3">
+            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 shrink-0 text-xs">AI</div>
+            <div class="bg-gray-100 p-3.5 rounded-2xl max-w-[80%] text-sm text-gray-800">Hello! I'm Max AI. How can I help you today?</div>
+        </div>
+    </main>
+
+    <!-- Input Footer Bar -->
+    <footer class="p-4 bg-white flex justify-center pb-6">
+        <div class="w-full max-w-2xl">
+            <form id="chat-form" class="relative bg-gray-50 rounded-full border border-gray-200 focus-within:border-gray-400 shadow-sm flex items-center px-4 py-2">
+                <input type="text" id="user-input" placeholder="Ask Max AI anything..." autocomplete="off" class="w-full bg-transparent text-sm focus:outline-none text-gray-800 placeholder-gray-400 pr-10">
+                <button type="submit" class="absolute right-3 bg-black text-white p-2 rounded-full hover:opacity-80 transition flex items-center justify-center w-7 h-7 cursor-pointer">
+                    <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5" height="1em" width="1em"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                </button>
+            </form>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
