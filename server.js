@@ -16,9 +16,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-app.use(express.json());
-
-// Serve the www folder
+app.use(express.json({ limit: "10mb" }));
 
 app.use(express.static(path.join(__dirname, "www")));
 
@@ -27,6 +25,12 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "www", "index.html"));
 
 });
+
+if (!process.env.GEMINI_API_KEY) {
+
+    console.error("GEMINI_API_KEY is missing.");
+
+}
 
 const ai = new GoogleGenAI({
 
@@ -38,9 +42,9 @@ app.post("/chat", async (req, res) => {
 
     try {
 
-        const { message } = req.body;
+        const { message, image } = req.body;
 
-        if (!message) {
+        if (!message && !image) {
 
             return res.status(400).json({
 
@@ -50,23 +54,93 @@ app.post("/chat", async (req, res) => {
 
         }
 
+        if (!image) {
+
+            const result = await ai.models.generateContent({
+
+                model: "gemini-3.5-flash-lite",
+
+                contents: message,
+
+                config: {
+
+                    systemInstruction:
+
+                        "You are Max AI, a helpful, friendly and precise AI assistant."
+
+                }
+
+            });
+
+            return res.json({
+
+                response: result.text
+
+            });
+
+        }
+
+        const match = image.match(
+
+            /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/
+
+        );
+
+        if (!match) {
+
+            return res.status(400).json({
+
+                response: "The uploaded image format is not supported."
+
+            });
+
+        }
+
+        const mimeType = match[1];
+
+        const base64Data = match[2];
+
         const result = await ai.models.generateContent({
 
-            model: "gemini-3.5-flash-lite",
+            model: "gemini-2.5-flash",
 
-            contents: message,
+            contents: [
 
-            config: {
+                {
 
-                systemInstruction:
+                    role: "user",
 
-                    "You are Max AI, a helpful, precise, and concise AI assistant."
+                    parts: [
 
-            }
+                        {
+
+                            text: message ||
+
+                                "Please analyze this image."
+
+                        },
+
+                        {
+
+                            inlineData: {
+
+                                mimeType: mimeType,
+
+                                data: base64Data
+
+                            }
+
+                        }
+
+                    ]
+
+                }
+
+            ]
 
         });
 
-        res.json({
+        return res.json({
 
             response: result.text
 
@@ -76,9 +150,9 @@ app.post("/chat", async (req, res) => {
 
         console.error("Gemini Error:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
 
-            response: "Max AI error: " + error.message
+            response: "Max AI could not respond right now."
 
         });
 

@@ -1,11 +1,176 @@
-/* Custom Scrollbar for Max AI */
-::-webkit-scrollbar {
-    width: 6px;
+/* =========================================
+MAX AI - MAIN STYLES
+========================================= */
+
+* {
+    box-sizing: border-box;
+    }
+
+html,
+body {
+margin: 0;
+padding: 0;
+width: 100%;
+height: 100%;
 }
-::-webkit-scrollbar-thumb {
-    background: #e5e7eb;
-    border-radius: 3px;
+
+body {
+overflow: hidden;
+-webkit-font-smoothing: antialiased;
 }
-::-webkit-scrollbar-thumb:hover {
-    background: #d1d5db;
+
+/* =========================================
+CHAT AREA
+========================================= */
+
+#chat-container {
+scroll-behavior: smooth;
+-webkit-overflow-scrolling: touch;
+}
+
+/* Scrollbar */
+
+#chat-container::-webkit-scrollbar {
+width: 5px;
+}
+
+#chat-container::-webkit-scrollbar-track {
+background: transparent;
+}
+
+#chat-container::-webkit-scrollbar-thumb {
+background: #d1d5db;
+border-radius: 10px;
+}
+
+/* =========================================
+MESSAGE ANIMATION
+========================================= */
+
+#chat-container > div {
+animation: messageAppear 0.2s ease-out;
+}
+
+@keyframes messageAppear {
+from {
+opacity: 0;
+transform: translateY(5px);
+}
+
+to {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+}
+
+/* =========================================
+INPUT
+========================================= */
+
+#user-input {
+min-width: 0;
+}
+
+#user-input:disabled {
+opacity: 0.6;
+cursor: not-allowed;
+}
+
+/* =========================================
+BUTTONS
+========================================= */
+
+button {
+-webkit-tap-highlight-color: transparent;
+}
+
+button:active {
+transform: scale(0.95);
+}
+
+/* Emoji buttons */
+
+.emoji-btn {
+border-radius: 10px;
+padding: 5px;
+transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.emoji-btn:hover {
+background: #e5e7eb;
+}
+
+.emoji-btn:active {
+transform: scale(1.15);
+}
+
+/* =========================================
+IMAGE PREVIEW
+========================================= */
+
+#image-preview {
+display: block;
+}
+
+/* =========================================
+SETTINGS PANEL
+========================================= */
+
+#settings-panel {
+backdrop-filter: blur(3px);
+-webkit-backdrop-filter: blur(3px);
+}
+
+/* =========================================
+MOBILE
+========================================= */
+
+@media (max-width: 640px) {
+
+#chat-container {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+}
+footer {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+}
+#chat-form {
+    padding: 5px !important;
+}
+#user-input {
+    font-size: 16px;
+}
+#settings-panel > div {
+    width: 90%;
+}
+
+}
+
+/* =========================================
+IPHONE SAFE AREA
+========================================= */
+
+@supports (padding: env(safe-area-inset-bottom)) {
+
+footer {
+    padding-bottom: calc(
+        12px + env(safe-area-inset-bottom)
+    ) !important;
+}
+
+}
+
+/* =========================================
+ACCESSIBILITY
+========================================= */
+
+button:focus-visible,
+input:focus-visible {
+outline: 2px solid #111827;
+outline-offset: 2px;
 }

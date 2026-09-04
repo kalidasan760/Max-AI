@@ -2,39 +2,235 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
     <title>Max AI</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-white text-gray-800 h-screen flex flex-col justify-between font-sans m-0">
-
-    <!-- Top Header -->
-    <header class="py-4 border-b border-gray-100 flex flex-col items-center justify-center bg-white">
+<body class="bg-white text-gray-800 h-screen flex flex-col font-sans m-0">
+<!-- ================= HEADER ================= -->
+<header class="py-3 px-4 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
+    <!-- Left: New Chat -->
+    <button
+        id="new-chat-btn"
+        type="button"
+        class="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
+        title="New chat"
+        aria-label="New chat">
+        <span class="text-lg">＋</span>
+    </button>
+    <!-- Center -->
+    <div class="text-center">
         <h1 class="font-bold text-base text-gray-900 m-0">Max AI</h1>
         <span class="text-xs text-gray-400">How can I help you today?</span>
-    </header>
-
-    <!-- Chat Stream Area -->
-    <main id="chat-container" class="flex-1 overflow-y-auto px-4 py-6 space-y-6 max-w-3xl w-full mx-auto flex flex-col">
-        <div class="flex items-start space-x-3">
-            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 shrink-0 text-xs">AI</div>
-            <div class="bg-gray-100 p-3.5 rounded-2xl max-w-[80%] text-sm text-gray-800">Hello! I'm Max AI. How can I help you today?</div>
+    </div>
+    <!-- Right: Settings -->
+    <button
+        id="settings-btn"
+        type="button"
+        class="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
+        title="Settings"
+        aria-label="Settings">
+        ⚙️
+    </button>
+</header>
+<!-- ================= CHAT AREA ================= -->
+<main
+    id="chat-container"
+    class="flex-1 overflow-y-auto px-4 py-6 space-y-6 max-w-3xl w-full mx-auto flex flex-col">
+    <!-- Initial Max message -->
+    <div class="flex items-start space-x-3">
+        <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-700 shrink-0 text-xs">
+            AI
         </div>
-    </main>
-
-    <!-- Input Footer Bar -->
-    <footer class="p-4 bg-white flex justify-center pb-6">
-        <div class="w-full max-w-2xl">
-            <form id="chat-form" class="relative bg-gray-50 rounded-full border border-gray-200 focus-within:border-gray-400 shadow-sm flex items-center px-4 py-2">
-                <input type="text" id="user-input" placeholder="Ask Max AI anything..." autocomplete="off" class="w-full bg-transparent text-sm focus:outline-none text-gray-800 placeholder-gray-400 pr-10">
-                <button type="submit" class="absolute right-3 bg-black text-white p-2 rounded-full hover:opacity-80 transition flex items-center justify-center w-7 h-7 cursor-pointer">
-                    <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5" height="1em" width="1em"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+        <div class="bg-gray-100 p-3.5 rounded-2xl max-w-[80%] text-sm text-gray-800">
+            Hello! I'm Max AI. How can I help you today? 👋
+        </div>
+    </div>
+</main>
+<!-- ================= IMAGE PREVIEW ================= -->
+<div
+    id="image-preview-container"
+    class="hidden max-w-2xl w-full mx-auto px-4 pb-2">
+    <div class="relative inline-block">
+        <img
+            id="image-preview"
+            src=""
+            alt="Selected image"
+            class="max-w-[180px] max-h-[180px] rounded-2xl border border-gray-200 object-cover">
+        <button
+            id="remove-image-btn"
+            type="button"
+            class="absolute -top-2 -right-2 w-7 h-7 bg-black text-white rounded-full text-sm flex items-center justify-center"
+            aria-label="Remove image">
+            ×
+        </button>
+    </div>
+</div>
+<!-- ================= EMOJI PANEL ================= -->
+<div
+    id="emoji-panel"
+    class="hidden max-w-2xl w-full mx-auto px-4 pb-2">
+    <div class="bg-gray-50 border border-gray-200 rounded-2xl p-3">
+        <div class="grid grid-cols-8 gap-2 text-xl text-center">
+            <button type="button" class="emoji-btn">😀</button>
+            <button type="button" class="emoji-btn">😃</button>
+            <button type="button" class="emoji-btn">😄</button>
+            <button type="button" class="emoji-btn">😁</button>
+            <button type="button" class="emoji-btn">😂</button>
+            <button type="button" class="emoji-btn">😊</button>
+            <button type="button" class="emoji-btn">😍</button>
+            <button type="button" class="emoji-btn">🥰</button>
+            <button type="button" class="emoji-btn">😎</button>
+            <button type="button" class="emoji-btn">🤔</button>
+            <button type="button" class="emoji-btn">😢</button>
+            <button type="button" class="emoji-btn">😡</button>
+            <button type="button" class="emoji-btn">👍</button>
+            <button type="button" class="emoji-btn">👎</button>
+            <button type="button" class="emoji-btn">❤️</button>
+            <button type="button" class="emoji-btn">🔥</button>
+        </div>
+    </div>
+</div>
+<!-- ================= INPUT FOOTER ================= -->
+<footer class="p-3 bg-white flex justify-center pb-4 shrink-0">
+    <div class="w-full max-w-2xl">
+        <form
+            id="chat-form"
+            class="bg-gray-50 rounded-3xl border border-gray-200 focus-within:border-gray-400 shadow-sm flex items-center px-2 py-2">
+            <!-- Emoji -->
+            <button
+                id="emoji-btn"
+                type="button"
+                class="w-9 h-9 rounded-full hover:bg-gray-200 flex items-center justify-center text-lg shrink-0"
+                title="Emoji"
+                aria-label="Emoji">
+                😊
+            </button>
+            <!-- Photo -->
+            <button
+                id="photo-btn"
+                type="button"
+                class="w-9 h-9 rounded-full hover:bg-gray-200 flex items-center justify-center text-lg shrink-0"
+                title="Add photo"
+                aria-label="Add photo">
+                📷
+            </button>
+            <!-- Hidden file input -->
+            <input
+                type="file"
+                id="photo-input"
+                accept="image/*"
+                class="hidden">
+            <!-- Message -->
+            <input
+                type="text"
+                id="user-input"
+                placeholder="Ask Max AI anything..."
+                autocomplete="off"
+                class="flex-1 min-w-0 bg-transparent text-sm focus:outline-none text-gray-800 placeholder-gray-400 px-2">
+            <!-- Voice -->
+            <button
+                id="voice-btn"
+                type="button"
+                class="w-9 h-9 rounded-full hover:bg-gray-200 flex items-center justify-center text-lg shrink-0"
+                title="Voice input"
+                aria-label="Voice input">
+                🎤
+            </button>
+            <!-- Send -->
+            <button
+                id="send-btn"
+                type="submit"
+                class="bg-black text-white p-2 rounded-full hover:opacity-80 transition flex items-center justify-center w-9 h-9 shrink-0 cursor-pointer"
+                title="Send"
+                aria-label="Send">
+                <svg
+                    stroke="currentColor"
+                    fill="none"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="h-4 w-4">
+                    <line x1="12" y1="19" x2="12" y2="5"></line>
+                    <polyline points="5 12 12 5 19 12"></polyline>
+                </svg>
+            </button>
+        </form>
+    </div>
+</footer>
+<!-- ================= SETTINGS PANEL ================= -->
+<div
+    id="settings-panel"
+    class="hidden fixed inset-0 bg-black/30 z-50">
+    <div
+        class="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-xl p-5">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-bold text-gray-900">
+                Max AI Settings
+            </h2>
+            <button
+                id="close-settings-btn"
+                type="button"
+                class="w-9 h-9 rounded-full hover:bg-gray-100 text-xl">
+                ×
+            </button>
+        </div>
+        <!-- Memory -->
+        <div class="py-4 border-b border-gray-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="font-medium text-gray-900">
+                        🧠 Memory
+                    </p>
+                    <p class="text-xs text-gray-400">
+                        Remember useful information
+                    </p>
+                </div>
+                <button
+                    id="memory-toggle"
+                    type="button"
+                    class="px-3 py-1.5 rounded-full bg-black text-white text-xs">
+                    ON
                 </button>
-            </form>
+            </div>
         </div>
-    </footer>
-
-    <script src="script.js"></script>
+        <!-- Clear Chat -->
+        <button
+            id="clear-chat-btn"
+            type="button"
+            class="w-full text-left py-4 border-b border-gray-100 hover:bg-gray-50">
+            <p class="font-medium text-gray-900">
+                🗑️ Clear chat
+            </p>
+            <p class="text-xs text-gray-400">
+                Delete this conversation
+            </p>
+        </button>
+        <!-- Clear Memory -->
+        <button
+            id="clear-memory-btn"
+            type="button"
+            class="w-full text-left py-4 border-b border-gray-100 hover:bg-gray-50">
+            <p class="font-medium text-gray-900">
+                🧠 Clear memories
+            </p>
+            <p class="text-xs text-gray-400">
+                Delete saved memories
+            </p>
+        </button>
+        <!-- Close -->
+        <button
+            id="settings-done-btn"
+            type="button"
+            class="mt-6 w-full bg-black text-white rounded-xl py-3 font-medium">
+            Done
+        </button>
+    </div>
+</div>
+<!-- ================= JAVASCRIPT ================= -->
+<script src="script.js"></script>
 </body>
 </html>
