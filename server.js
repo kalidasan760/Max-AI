@@ -1,18 +1,24 @@
 import express from 'express';
+
 import dotenv from 'dotenv';
+
 import { GoogleGenAI } from '@google/genai';
+
 import path from 'path';
+
 import { fileURLToPath } from 'url';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
+
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 app.use(express.json());
+
+// Serve your Max AI website
 
 app.use(express.static(__dirname));
 
@@ -22,37 +28,60 @@ app.get('/', (req, res) => {
 
 });
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Gemini AI
 
-app.post('/chat', async (req, res) => {
-    try {
-        const { message } = req.body;
+const ai = new GoogleGenAI({
 
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+    apiKey: process.env.GEMINI_API_KEY
 
-        const responseStream = await ai.models.generateContentStream({
-            model: 'gemini-3.5-flash-lite',
-            contents: message,
-            config: {
-                systemInstruction: 'You are Max AI, a helpful, precise, and concise AI assistant.'
-            }
-        });
-
-        for await (const chunk of responseStream) {
-            if (chunk.text) {
-                res.write(`data: ${JSON.stringify({ response: chunk.text })}\n\n`);
-            }
-        }
-        res.end();
-    } catch (error) {
-        console.error("API Error Details:", error);
-        res.write(`data: ${JSON.stringify({ response: 'Error: ' + (error.message || 'Unknown error occurred') })}\n\n`);
-        res.end();
-    }
 });
 
+app.post('/chat', async (req, res) => {
+
+    try {
+
+        const { message } = req.body;
+
+        const response = await ai.models.generateContent({
+
+            model: 'gemini-2.5-flash',
+
+            contents: message,
+
+            config: {
+
+                systemInstruction:
+
+                    'You are Max AI, a helpful, precise, and concise AI assistant.'
+
+            }
+
+        });
+
+        res.json({
+
+            response: response.text
+
+        });
+
+    } catch (error) {
+
+        console.error('API Error:', error);
+
+        res.status(500).json({
+
+            response: 'Sorry, Max AI could not respond right now.'
+
+        });
+
+    }
+
+});
+
+const port = process.env.PORT || 3000;
+
 app.listen(port, () => {
-    console.log(`Max AI server running at http://localhost:${port}`);
+
+    console.log(`Max AI server running on port ${port}`);
+
 });
