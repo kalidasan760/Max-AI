@@ -1,4 +1,80 @@
 /* =========================================
+   CHAT MESSAGE BUBBLES
+   ========================================= */
+
+#chat-container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Every message */
+#chat-container .message {
+    display: block;
+    width: fit-content;
+    max-width: 75%;
+    padding: 11px 15px;
+    border-radius: 16px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    animation: messageAppear 0.2s ease-out;
+}
+
+/* User message — RIGHT */
+#chat-container .user-message {
+    align-self: flex-end;
+    background: #1f2937;
+    color: white;
+    border-bottom-right-radius: 5px;
+    margin-left: auto;
+}
+
+/* Max AI message — LEFT */
+#chat-container .ai-message {
+    align-self: flex-start;
+    background: #f1f1f1;
+    color: #222;
+    border-bottom-left-radius: 5px;
+    margin-right: auto;
+}
+
+/* Error message */
+#chat-container .ai-message.error {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+
+    #chat-container {
+        gap: 12px;
+    }
+
+    #chat-container .message {
+        max-width: 85%;
+        padding: 10px 13px;
+        font-size: 15px;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* =========================================
 MAX AI - MAIN STYLES
 ========================================= */
 
