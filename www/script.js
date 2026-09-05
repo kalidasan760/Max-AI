@@ -40,6 +40,14 @@ const newChatBtn = document.getElementById("new-chat-btn");
 
 let selectedImage = null;
 
+// Unique ID for this Max AI user/browser
+let MAX_AI_USER_ID = localStorage.getItem("max_ai_user_id");
+
+if (!MAX_AI_USER_ID) {
+    MAX_AI_USER_ID = crypto.randomUUID();
+    localStorage.setItem("max_ai_user_id", MAX_AI_USER_ID);
+}
+
 const CHAT_STORAGE_KEY = "max_ai_chat";
 
 const MEMORY_STORAGE_KEY = "max_ai_memory";
@@ -512,13 +520,15 @@ form.addEventListener("submit", async event => {
 
                 },
 
-                body: JSON.stringify({
+               body: JSON.stringify({
 
-                    message: message,
+    message: message,
 
-                    image: imageToSend
+    image: imageToSend,
 
-                })
+    userId: MAX_AI_USER_ID
+
+})               
 
             });
 
