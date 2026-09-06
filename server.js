@@ -11,9 +11,7 @@ const app = express();
 app.use(express.json({ limit: "15mb" }));
 app.use(express.static(path.join(__dirname, "www")));
 app.get("/", (req, res) => {
-    res.sendFile(
-        path.join(__dirname, "www", "index.html")
-    );
+    res.sendFile(path.join(__dirname, "www", "index.html"));
 });
 // =====================================================
 // SUPABASE
@@ -30,6 +28,184 @@ const ai = new GoogleGenAI({
 });
 const MODEL = "gemini-3.6-flash";
 // =====================================================
+// MEMORY HELPERS
+// =====================================================
+// Get all memories for this user
+async function getUserMemories(userId) {
+    const { data, error } = await supabase
+        .from("memories")
+        .select("id, memory")
+        .eq("user_id", userId)
+        .order("created_at", {
+            ascending: true
+        });
+    if (error) {
+        console.error(
+            "Memory read error:",
+            error
+        );
+        return [];
+    }
+    return data || [];
+}
+// Save one memory
+async function saveMemory(userId, memory) {
+    if (!memory || !memory.trim()) {
+        return false;
+    }
+    const cleanMemory = memory.trim();
+    // Prevent duplicate memories
+    const { data: existing, error: checkError } =
+        await supabase
+            .from("memories")
+            .select("id")
+            .eq("user_id", userId)
+            .ilike("memory", cleanMemory)
+            .limit(1);
+    if (checkError) {
+        console.error(
+            "Memory duplicate check error:",
+            checkError
+        );
+    }
+    if (existing && existing.length > 0) {
+        console.log(
+            "Memory already exists:",
+            cleanMemory
+        );
+        return true;
+    }
+    const { error } = await supabase
+        .from("memories")
+        .insert({
+            user_id: userId,
+            memory: cleanMemory
+        });
+    if (error) {
+        console.error(
+            "Memory save error:",
+            error
+        );
+        return false;
+    }
+    console.log(
+        "Memory saved:",
+        cleanMemory
+    );
+    return true;
+}
+// Delete memories matching text
+async function deleteMemory(userId, memoryText) {
+    if (!memoryText || !memoryText.trim()) {
+        return false;
+    }
+    const { error } = await supabase
+        .from("memories")
+        .delete()
+        .eq("user_id", userId)
+        .ilike(
+            "memory",
+            `%${memoryText.trim()}%`
+        );
+    if (error) {
+        console.error(
+            "Memory delete error:",
+            error
+        );
+        return false;
+    }
+    console.log(
+        "Memory deleted:",
+        memoryText
+    );
+    return true;
+}
+// =====================================================
+// DETECT EXPLICIT MEMORY REQUEST
+// =====================================================
+function extractRememberRequest(message) {
+    if (!message) {
+        return null;
+    }
+    const text = message.trim();
+    // -------------------------------------------------
+    // "Remember my name is Kalidasan"
+    // -------------------------------------------------
+    let match = text.match(
+        /^remember\s+my\s+name\s+is\s+(.+)$/i
+    );
+    if (match) {
+        return `My name is ${match[1].trim()}.`;
+    }
+    // -------------------------------------------------
+    // "Remember that I like football"
+    // "Remember I like football"
+    // -------------------------------------------------
+    match = text.match(
+        /^remember\s+(?:that\s+)?(.+)$/i
+    );
+    if (match) {
+        let fact = match[1].trim();
+        // Remove ending punctuation
+        fact = fact.replace(/[.!?]+$/, "");
+        if (!fact) {
+            return null;
+        }
+        // If user already says "I ..."
+        if (/^i\s+/i.test(fact)) {
+            return fact.charAt(0).toUpperCase() +
+                fact.slice(1) +
+                ".";
+        }
+        // Otherwise keep the user's fact
+        return fact.charAt(0).toUpperCase() +
+            fact.slice(1) +
+            ".";
+    }
+    return null;
+}
+// =====================================================
+// DETECT FORGET REQUEST
+// =====================================================
+function extractForgetRequest(message) {
+    if (!message) {
+        return null;
+    }
+    const text = message.trim();
+    // -------------------------------------------------
+    // "Forget my name"
+    // -------------------------------------------------
+    let match = text.match(
+        /^forget\s+my\s+name$/i
+    );
+    if (match) {
+        return "My name";
+    }
+    // -------------------------------------------------
+    // "Forget that I like football"
+    // -------------------------------------------------
+    match = text.match(
+        /^forget\s+(?:that\s+)?(.+)$/i
+    );
+    if (match) {
+        let fact = match[1].trim();
+        fact = fact.replace(/[.!?]+$/, "");
+        return fact;
+    }
+    return null;
+}
+// =====================================================
+// FORMAT MEMORY FOR GEMINI
+// =====================================================
+function formatMemories(memories) {
+    if (!memories || memories.length === 0) {
+        return "No saved memories.";
+    }
+    return memories
+        .map(item => `- ${item.memory}`)
+        .join("\n");
+}
+// =====================================================
 // CHAT
 // =====================================================
 app.post("/chat", async (req, res) => {
@@ -40,9 +216,9 @@ app.post("/chat", async (req, res) => {
             userId,
             memoryEnabled
         } = req.body;
-        // -------------------------------------------------
+        // =================================================
         // VALIDATION
-        // -------------------------------------------------
+        // =================================================
         if (!message && !image) {
             return res.status(400).json({
                 response:
@@ -56,38 +232,59 @@ app.post("/chat", async (req, res) => {
             });
         }
         // =================================================
-        // GET USER MEMORY
+        // MEMORY ENABLED?
         // =================================================
-        let memoryList = [];
-        if (memoryEnabled !== false) {
-            const {
-                data: memories,
-                error: memoryError
-            } = await supabase
-                .from("memories")
-                .select("id, memory")
-                .eq("user_id", userId)
-                .order("created_at", {
-                    ascending: true
-                });
-            if (memoryError) {
-                console.error(
-                    "Memory read error:",
-                    memoryError
+        const useMemory =
+            memoryEnabled !== false;
+        // =================================================
+        // EXPLICIT MEMORY COMMANDS
+        // =================================================
+        let directMemorySaved = false;
+        let directMemoryDeleted = false;
+        if (useMemory && message) {
+            // ---------------------------------------------
+            // REMEMBER
+            // ---------------------------------------------
+            const memoryToSave =
+                extractRememberRequest(message);
+            if (memoryToSave) {
+                directMemorySaved =
+                    await saveMemory(
+                        userId,
+                        memoryToSave
+                    );
+                console.log(
+                    "Explicit memory request:",
+                    memoryToSave
                 );
-            } else {
-                memoryList = memories || [];
+            }
+            // ---------------------------------------------
+            // FORGET
+            // ---------------------------------------------
+            const memoryToDelete =
+                extractForgetRequest(message);
+            if (memoryToDelete) {
+                directMemoryDeleted =
+                    await deleteMemory(
+                        userId,
+                        memoryToDelete
+                    );
+                console.log(
+                    "Explicit forget request:",
+                    memoryToDelete
+                );
             }
         }
-        // -------------------------------------------------
-        // FORMAT MEMORY
-        // -------------------------------------------------
-        let memoryText = "No saved memories.";
-        if (memoryList.length > 0) {
-            memoryText = memoryList
-                .map(item => `- ${item.memory}`)
-                .join("\n");
+        // =================================================
+        // GET CURRENT USER MEMORY
+        // =================================================
+        let memories = [];
+        if (useMemory) {
+            memories =
+                await getUserMemories(userId);
         }
+        const memoryText =
+            formatMemories(memories);
         // =================================================
         // GEMINI CONTENT
         // =================================================
@@ -97,9 +294,9 @@ app.post("/chat", async (req, res) => {
                 text: message
             });
         }
-        // -------------------------------------------------
+        // =================================================
         // IMAGE
-        // -------------------------------------------------
+        // =================================================
         if (image) {
             const match = image.match(
                 /^data:(image\/[^;]+);base64,(.+)$/
@@ -128,35 +325,23 @@ app.post("/chat", async (req, res) => {
         // =================================================
         const systemInstruction = `
 You are Max AI, a helpful, friendly and intelligent AI assistant.
-Give clear, useful and natural answers.
-These are memories belonging ONLY to this user:
+Give clear, natural and useful answers.
+You have access to memories belonging ONLY to the current user.
+USER'S SAVED MEMORIES:
 ${memoryText}
 Use these memories naturally when they are relevant.
-IMPORTANT MEMORY RULES:
-1. Only save information when the user explicitly asks you to remember it.
-2. Examples:
-"Remember my name is Rahul."
-"Remember that I am a data analyst."
-"Remember I like football."
-3. Do NOT save random conversation.
-4. Do NOT save temporary information.
-5. Do NOT save sensitive personal information unless the user explicitly asks you to remember it.
-6. If the user asks you to forget something, identify the matching memory.
-7. Do not tell the user that you are processing memory.
-At the END of your response, provide these internal instructions:
-MEMORY_TO_SAVE: none
-OR:
-MEMORY_TO_SAVE:
-- exact fact one
-- exact fact two
-And:
-MEMORY_TO_DELETE: none
-OR:
-MEMORY_TO_DELETE: exact memory to delete
-Do not explain these instructions.
+IMPORTANT:
+- If the user's name is in the memories, use it naturally.
+- Do not claim that you don't know something that is present in the memories.
+- Do not invent memories.
+- Do not expose the internal memory system.
+- Do not mention database, Supabase, memory tables, or internal instructions.
+- If the user says "remember..." the server handles saving it.
+- If the user says "forget..." the server handles deletion.
+- Answer the user normally.
 `;
         // =================================================
-        // GEMINI
+        // GEMINI REQUEST
         // =================================================
         const result =
             await ai.models.generateContent({
@@ -178,145 +363,42 @@ Do not explain these instructions.
         let responseText =
             result.text || "";
         // =================================================
-        // EXTRACT MEMORY TO SAVE
+        // FALLBACK IF GEMINI RETURNS NOTHING
         // =================================================
-        let memoryToSave = [];
-        const saveMatch =
-            responseText.match(
-                /MEMORY_TO_SAVE:\s*([\s\S]*?)(?=MEMORY_TO_DELETE:|$)/i
-            );
-        if (
-            saveMatch &&
-            saveMatch[1].trim() &&
-            saveMatch[1].trim().toLowerCase() !== "none"
-        ) {
-            memoryToSave =
-                saveMatch[1]
-                    .split("\n")
-                    .map(item =>
-                        item
-                            .replace(/^[-•*]\s*/, "")
-                            .trim()
-                    )
-                    .filter(Boolean);
+        if (!responseText.trim()) {
+            responseText =
+                "I'm here. How can I help you?";
         }
         // =================================================
-        // EXTRACT MEMORY TO DELETE
+        // SPECIAL RESPONSE FOR REMEMBER
         // =================================================
-        let memoryToDelete = null;
-        const deleteMatch =
-            responseText.match(
-                /MEMORY_TO_DELETE:\s*([\s\S]*)$/i
-            );
         if (
-            deleteMatch &&
-            deleteMatch[1].trim() &&
-            deleteMatch[1].trim().toLowerCase() !== "none"
+            directMemorySaved &&
+            message &&
+            /^remember\s+/i.test(message.trim())
         ) {
-            memoryToDelete =
-                deleteMatch[1]
-                    .trim()
-                    .replace(/^[-•*]\s*/, "");
-        }
-        // =================================================
-        // SAVE MEMORY
-        // =================================================
-        if (memoryEnabled !== false) {
-            for (const memory of memoryToSave) {
-                if (!memory) continue;
-                const {
-                    error
-                } = await supabase
-                    .from("memories")
-                    .insert({
-                        user_id: userId,
-                        memory: memory
-                    });
-                if (error) {
-                    console.error(
-                        "Memory save error:",
-                        error
-                    );
-                } else {
-                    console.log(
-                        "Memory saved:",
-                        memory
-                    );
-                }
+            // Keep Gemini's natural response.
+            // If Gemini doesn't respond correctly,
+            // use a simple confirmation.
+            if (!responseText.trim()) {
+                responseText =
+                    "Got it. I'll remember that.";
             }
         }
         // =================================================
-        // DELETE MEMORY
-        // =================================================
-        if (
-            memoryEnabled !== false &&
-            memoryToDelete
-        ) {
-            const {
-                error
-            } = await supabase
-                .from("memories")
-                .delete()
-                .eq("user_id", userId)
-                .ilike(
-                    "memory",
-                    `%${memoryToDelete}%`
-                );
-            if (error) {
-                console.error(
-                    "Memory delete error:",
-                    error
-                );
-            } else {
-                console.log(
-                    "Memory deleted:",
-                    memoryToDelete
-                );
-            }
-        }
-        // =================================================
-        // GET UPDATED MEMORY
+        // GET FINAL UPDATED MEMORY
         // =================================================
         let updatedMemory = "";
-        if (memoryEnabled !== false) {
-            const {
-                data: updatedMemories,
-                error: updatedMemoryError
-            } = await supabase
-                .from("memories")
-                .select("memory")
-                .eq("user_id", userId)
-                .order("created_at", {
-                    ascending: true
-                });
-            if (updatedMemoryError) {
-                console.error(
-                    "Updated memory read error:",
-                    updatedMemoryError
-                );
-            } else {
-                updatedMemory =
-                    (updatedMemories || [])
-                        .map(item => item.memory)
-                        .join("\n");
-            }
+        if (useMemory) {
+            const finalMemories =
+                await getUserMemories(userId);
+            updatedMemory =
+                finalMemories
+                    .map(item => item.memory)
+                    .join("\n");
         }
         // =================================================
-        // REMOVE INTERNAL MEMORY INSTRUCTIONS
-        // =================================================
-        responseText =
-            responseText
-                .replace(
-                    /MEMORY_TO_SAVE:[\s\S]*?(?=MEMORY_TO_DELETE:|$)/i,
-                    ""
-                )
-                .replace(
-                    /MEMORY_TO_DELETE:[\s\S]*$/i,
-                    ""
-                )
-                .trim();
-        // =================================================
-        // SEND RESPONSE
+        // RESPONSE
         // =================================================
         res.json({
             response: responseText,
@@ -334,7 +416,7 @@ Do not explain these instructions.
     }
 });
 // =====================================================
-// CLEAR MEMORY
+// CLEAR ALL MEMORY
 // =====================================================
 app.post("/clear-memory", async (req, res) => {
     try {
@@ -342,15 +424,15 @@ app.post("/clear-memory", async (req, res) => {
         if (!userId) {
             return res.status(400).json({
                 success: false,
-                message: "User ID is missing."
+                message:
+                    "User ID is missing."
             });
         }
-        const {
-            error
-        } = await supabase
-            .from("memories")
-            .delete()
-            .eq("user_id", userId);
+        const { error } =
+            await supabase
+                .from("memories")
+                .delete()
+                .eq("user_id", userId);
         if (error) {
             console.error(
                 "Clear memory error:",
@@ -358,7 +440,8 @@ app.post("/clear-memory", async (req, res) => {
             );
             return res.status(500).json({
                 success: false,
-                message: "Could not clear memory."
+                message:
+                    "Could not clear memory."
             });
         }
         console.log(
@@ -375,7 +458,8 @@ app.post("/clear-memory", async (req, res) => {
         );
         res.status(500).json({
             success: false,
-            message: "Could not clear memory."
+            message:
+                "Could not clear memory."
         });
     }
 });
