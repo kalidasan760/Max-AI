@@ -49,25 +49,32 @@ async function getUserMemories(userId) {
     return data || [];
 }
 // Save one memory
+
 async function saveMemory(userId, memory) {
     if (!memory || !memory.trim()) {
         return false;
     }
+
     const cleanMemory = memory.trim();
-    // Prevent duplicate memories
+
+    // Prevent exact duplicate memories
     const { data: existing, error: checkError } =
         await supabase
             .from("memories")
-            .select("id")
+            .select("id, memory")
             .eq("user_id", userId)
-            .ilike("memory", cleanMemory)
+            .eq("memory", cleanMemory)
             .limit(1);
+
     if (checkError) {
         console.error(
             "Memory duplicate check error:",
             checkError
         );
+        return false;
     }
+
+    // Memory already exists
     if (existing && existing.length > 0) {
         console.log(
             "Memory already exists:",
@@ -75,6 +82,32 @@ async function saveMemory(userId, memory) {
         );
         return true;
     }
+
+    // Save new memory
+    const { error } =
+        await supabase
+            .from("memories")
+            .insert({
+                user_id: userId,
+                memory: cleanMemory
+            });
+
+    if (error) {
+        console.error(
+            "Memory save error:",
+            error
+        );
+        return false;
+    }
+
+    console.log(
+        "Memory saved:",
+        cleanMemory
+    );
+
+    return true;
+}
+
     const { error } = await supabase
         .from("memories")
         .insert({
