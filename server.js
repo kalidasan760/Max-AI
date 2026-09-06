@@ -638,6 +638,12 @@ app.post("/chat", async (req, res) => {
 
             formatMemories(memories);
 
+        console.log("USER ID:", userId);
+
+         console.log("MEMORIES:", memories);
+
+         console.log("MEMORY TEXT:", memoryText);
+
         // =================================================
 
         // GEMINI CONTENT
