@@ -920,25 +920,21 @@ IMPORTANT RULES:
 
         });
 
-    } catch (error) {
+   } catch (error) {
+    console.error("Gemini Error:", error);
 
-        console.error(
-
-            "Gemini Error:",
-
-            error
-
-        );
-
-        return res.status(500).json({
-
+    if (error?.status === 429) {
+        return res.status(429).json({
             response:
-
-                "Max AI could not respond right now. Please try again."
-
+                "Max AI has temporarily reached its Gemini AI request limit. Please try again later."
         });
-
     }
+
+    return res.status(500).json({
+        response:
+            "Max AI could not respond right now. Please try again."
+    });
+}
 
 });
 
