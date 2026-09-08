@@ -222,7 +222,7 @@ async function getUserMemories(userId) {
 
         } = await supabase
 
-            .from("memories")
+            .from("memorise")
 
             .select(
 
@@ -354,7 +354,7 @@ async function saveMemory(
 
         } = await supabase
 
-            .from("memories")
+            .from("memorise")
 
             .select(
 
@@ -470,7 +470,7 @@ async function saveMemory(
 
         } = await supabase
 
-            .from("memories")
+            .from("memorise")
 
             .insert({
 
@@ -1174,7 +1174,7 @@ async function deleteMemory(
 
         } = await supabase
 
-            .from("memories")
+            .from("memorise")
 
             .delete()
 
@@ -2234,7 +2234,7 @@ app.post(
 
             } = await supabase
 
-                .from("memories")
+                .from("memorise")
 
                 .delete()
 
