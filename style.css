@@ -1,3 +1,22 @@
+/* ================= MAX AI LOGO ================= */
+
+.max-ai-logo {
+
+    width: 36px;
+
+    height: 36px;
+
+    object-fit: contain;
+
+    display: block;
+
+    margin: 0 auto 2px;
+
+}
+
+
+
+
 /* Custom Scrollbar for Max AI */
 ::-webkit-scrollbar {
     width: 6px;
