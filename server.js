@@ -1,4 +1,4 @@
-/import express from "express";
+import express from "express";
 
 import dotenv from "dotenv";
 
@@ -62,7 +62,7 @@ app.get("/", (req, res) => {
 
 // =====================================================
 
-// ENVIRONMENT CHECK
+// ENVIRONMENT
 
 // =====================================================
 
@@ -74,13 +74,17 @@ console.log("=================================");
 
 console.log(
 
+    "GEMINI_API_KEY:",
+
+    process.env.GEMINI_API_KEY ? "FOUND" : "MISSING"
+
+);
+
+console.log(
+
     "SUPABASE_URL:",
 
-    process.env.SUPABASE_URL
-
-        ? "FOUND"
-
-        : "MISSING"
+    process.env.SUPABASE_URL ? "FOUND" : "MISSING"
 
 );
 
@@ -88,23 +92,7 @@ console.log(
 
     "SUPABASE_SECRET_KEY:",
 
-    process.env.SUPABASE_SECRET_KEY
-
-        ? "FOUND"
-
-        : "MISSING"
-
-);
-
-console.log(
-
-    "GEMINI_API_KEY:",
-
-    process.env.GEMINI_API_KEY
-
-        ? "FOUND"
-
-        : "MISSING"
+    process.env.SUPABASE_SECRET_KEY ? "FOUND" : "MISSING"
 
 );
 
@@ -134,17 +122,13 @@ if (
 
     );
 
-    console.log(
-
-        "Supabase client initialized."
-
-    );
+    console.log("Supabase initialized.");
 
 } else {
 
     console.error(
 
-        "WARNING: Supabase environment variables are missing."
+        "Supabase environment variables are missing."
 
     );
 
@@ -166,17 +150,13 @@ if (process.env.GEMINI_API_KEY) {
 
     });
 
-    console.log(
-
-        "Gemini client initialized."
-
-    );
+    console.log("Gemini initialized.");
 
 } else {
 
     console.error(
 
-        "WARNING: GEMINI_API_KEY is missing."
+        "GEMINI_API_KEY is missing."
 
     );
 
@@ -184,27 +164,37 @@ if (process.env.GEMINI_API_KEY) {
 
 // =====================================================
 
-// MODEL
+// GEMINI MODEL
 
 // =====================================================
-
-// Gemini 3.6 Flash is currently supported.
 
 const MODEL = "gemini-3.6-flash";
 
 // =====================================================
 
-// NORMALIZE TEXT
+// TEXT HELPERS
 
 // =====================================================
 
-function normalizeText(text) {
+function cleanText(value) {
 
-    return String(text || "")
+    return String(value || "")
 
         .trim()
 
         .replace(/\s+/g, " ");
+
+}
+
+function removeEndingPunctuation(text) {
+
+    return cleanText(text).replace(
+
+        /[.!?]+$/,
+
+        ""
+
+    );
 
 }
 
@@ -216,19 +206,7 @@ function normalizeText(text) {
 
 async function getUserMemories(userId) {
 
-    if (!supabase) {
-
-        console.error(
-
-            "Cannot read memories: Supabase is not configured."
-
-        );
-
-        return [];
-
-    }
-
-    if (!userId) {
+    if (!supabase || !userId) {
 
         return [];
 
@@ -276,51 +254,9 @@ async function getUserMemories(userId) {
 
             console.error(
 
-                "================================="
+                "MEMORY READ ERROR:",
 
-            );
-
-            console.error(
-
-                "MEMORY READ ERROR"
-
-            );
-
-            console.error(
-
-                "Code:",
-
-                error.code
-
-            );
-
-            console.error(
-
-                "Message:",
-
-                error.message
-
-            );
-
-            console.error(
-
-                "Details:",
-
-                error.details
-
-            );
-
-            console.error(
-
-                "Hint:",
-
-                error.hint
-
-            );
-
-            console.error(
-
-                "================================="
+                error
 
             );
 
@@ -334,7 +270,7 @@ async function getUserMemories(userId) {
 
         console.error(
 
-            "Memory read exception:",
+            "MEMORY READ EXCEPTION:",
 
             error
 
@@ -362,17 +298,13 @@ async function saveMemory(
 
     if (!supabase) {
 
-        console.error(
-
-            "Memory save failed: Supabase is not configured."
-
-        );
-
         return {
 
             success: false,
 
-            error: "Supabase is not configured."
+            error:
+
+                "Supabase is not configured."
 
         };
 
@@ -380,7 +312,7 @@ async function saveMemory(
 
     const cleanMemory =
 
-        normalizeText(memory);
+        cleanText(memory);
 
     if (!userId) {
 
@@ -388,7 +320,9 @@ async function saveMemory(
 
             success: false,
 
-            error: "User ID is missing."
+            error:
+
+                "User ID is missing."
 
         };
 
@@ -400,7 +334,9 @@ async function saveMemory(
 
             success: false,
 
-            error: "Memory is empty."
+            error:
+
+                "Memory is empty."
 
         };
 
@@ -408,11 +344,7 @@ async function saveMemory(
 
     try {
 
-        // =================================================
-
-        // CHECK DUPLICATE
-
-        // =================================================
+        // Check duplicate
 
         const {
 
@@ -452,13 +384,7 @@ async function saveMemory(
 
             console.error(
 
-                "================================="
-
-            );
-
-            console.error(
-
-                "MEMORY DUPLICATE CHECK ERROR"
+                "MEMORY CHECK ERROR:"
 
             );
 
@@ -494,27 +420,19 @@ async function saveMemory(
 
             );
 
-            console.error(
-
-                "================================="
-
-            );
-
             return {
 
                 success: false,
 
-                error: checkError.message
+                error:
+
+                    checkError.message
 
             };
 
         }
 
-        // =================================================
-
-        // ALREADY EXISTS
-
-        // =================================================
+        // Already exists
 
         if (
 
@@ -526,7 +444,7 @@ async function saveMemory(
 
             console.log(
 
-                "Memory already exists:",
+                "MEMORY ALREADY EXISTS:",
 
                 cleanMemory
 
@@ -542,11 +460,7 @@ async function saveMemory(
 
         }
 
-        // =================================================
-
-        // INSERT
-
-        // =================================================
+        // Insert
 
         const {
 
@@ -616,22 +530,6 @@ async function saveMemory(
 
             console.error(
 
-                "User ID:",
-
-                userId
-
-            );
-
-            console.error(
-
-                "Memory:",
-
-                cleanMemory
-
-            );
-
-            console.error(
-
                 "================================="
 
             );
@@ -640,7 +538,9 @@ async function saveMemory(
 
                 success: false,
 
-                error: error.message
+                error:
+
+                    error.message
 
             };
 
@@ -660,7 +560,7 @@ async function saveMemory(
 
         console.log(
 
-            "USER ID:",
+            "USER:",
 
             userId
 
@@ -700,7 +600,7 @@ async function saveMemory(
 
         console.error(
 
-            "Memory save exception:",
+            "MEMORY SAVE EXCEPTION:",
 
             error
 
@@ -714,11 +614,499 @@ async function saveMemory(
 
                 error?.message ||
 
-                "Unknown memory save error."
+                "Unknown memory error."
 
         };
 
     }
+
+}
+
+// =====================================================
+
+// EXTRACT REMEMBER REQUEST
+
+// =====================================================
+
+function extractRememberRequest(message) {
+
+    const text =
+
+        cleanText(message);
+
+    if (!text) {
+
+        return null;
+
+    }
+
+    const lower =
+
+        text.toLowerCase();
+
+    // -----------------------------------------------
+
+    // "remember my name is Kalidasan"
+
+    // -----------------------------------------------
+
+    if (
+
+        lower.startsWith(
+
+            "remember my name is "
+
+        )
+
+    ) {
+
+        let name =
+
+            text.substring(
+
+                "remember my name is ".length
+
+            );
+
+        name =
+
+            removeEndingPunctuation(
+
+                name
+
+            );
+
+        if (!name) {
+
+            return null;
+
+        }
+
+        return `My name is ${name}.`;
+
+    }
+
+    // -----------------------------------------------
+
+    // "remember that I like football"
+
+    // -----------------------------------------------
+
+    if (
+
+        lower.startsWith(
+
+            "remember that "
+
+        )
+
+    ) {
+
+        let fact =
+
+            text.substring(
+
+                "remember that ".length
+
+            );
+
+        fact =
+
+            removeEndingPunctuation(
+
+                fact
+
+            );
+
+        if (!fact) {
+
+            return null;
+
+        }
+
+        return (
+
+            fact.charAt(0).toUpperCase() +
+
+            fact.substring(1) +
+
+            "."
+
+        );
+
+    }
+
+    // -----------------------------------------------
+
+    // "remember I like football"
+
+    // -----------------------------------------------
+
+    if (
+
+        lower.startsWith(
+
+            "remember "
+
+        )
+
+    ) {
+
+        let fact =
+
+            text.substring(
+
+                "remember ".length
+
+            );
+
+        fact =
+
+            removeEndingPunctuation(
+
+                fact
+
+            );
+
+        if (!fact) {
+
+            return null;
+
+        }
+
+        return (
+
+            fact.charAt(0).toUpperCase() +
+
+            fact.substring(1) +
+
+            "."
+
+        );
+
+    }
+
+    // -----------------------------------------------
+
+    // "please remember that I like Python"
+
+    // -----------------------------------------------
+
+    if (
+
+        lower.startsWith(
+
+            "please remember that "
+
+        )
+
+    ) {
+
+        let fact =
+
+            text.substring(
+
+                "please remember that ".length
+
+            );
+
+        fact =
+
+            removeEndingPunctuation(
+
+                fact
+
+            );
+
+        if (!fact) {
+
+            return null;
+
+        }
+
+        return (
+
+            fact.charAt(0).toUpperCase() +
+
+            fact.substring(1) +
+
+            "."
+
+        );
+
+    }
+
+    // -----------------------------------------------
+
+    // "please remember I like Python"
+
+    // -----------------------------------------------
+
+    if (
+
+        lower.startsWith(
+
+            "please remember "
+
+        )
+
+    ) {
+
+        let fact =
+
+            text.substring(
+
+                "please remember ".length
+
+            );
+
+        fact =
+
+            removeEndingPunctuation(
+
+                fact
+
+            );
+
+        if (!fact) {
+
+            return null;
+
+        }
+
+        return (
+
+            fact.charAt(0).toUpperCase() +
+
+            fact.substring(1) +
+
+            "."
+
+        );
+
+    }
+
+    // -----------------------------------------------
+
+    // "don't forget that I like Python"
+
+    // -----------------------------------------------
+
+    if (
+
+        lower.startsWith(
+
+            "don't forget that "
+
+        )
+
+    ) {
+
+        let fact =
+
+            text.substring(
+
+                "don't forget that ".length
+
+            );
+
+        fact =
+
+            removeEndingPunctuation(
+
+                fact
+
+            );
+
+        if (!fact) {
+
+            return null;
+
+        }
+
+        return (
+
+            fact.charAt(0).toUpperCase() +
+
+            fact.substring(1) +
+
+            "."
+
+        );
+
+    }
+
+    return null;
+
+}
+
+// =====================================================
+
+// EXTRACT FORGET REQUEST
+
+// =====================================================
+
+function extractForgetRequest(message) {
+
+    const text =
+
+        cleanText(message);
+
+    if (!text) {
+
+        return null;
+
+    }
+
+    const lower =
+
+        text.toLowerCase();
+
+    // -----------------------------------------------
+
+    // "forget my name"
+
+    // -----------------------------------------------
+
+    if (
+
+        lower ===
+
+        "forget my name"
+
+    ) {
+
+        return "My name";
+
+    }
+
+    // -----------------------------------------------
+
+    // "forget my birthday"
+
+    // -----------------------------------------------
+
+    if (
+
+        lower.startsWith(
+
+            "forget my "
+
+        )
+
+    ) {
+
+        let fact =
+
+            text.substring(
+
+                "forget my ".length
+
+            );
+
+        fact =
+
+            removeEndingPunctuation(
+
+                fact
+
+            );
+
+        if (!fact) {
+
+            return null;
+
+        }
+
+        return `My ${fact}`;
+
+    }
+
+    // -----------------------------------------------
+
+    // "forget that I like football"
+
+    // -----------------------------------------------
+
+    if (
+
+        lower.startsWith(
+
+            "forget that "
+
+        )
+
+    ) {
+
+        let fact =
+
+            text.substring(
+
+                "forget that ".length
+
+            );
+
+        fact =
+
+            removeEndingPunctuation(
+
+                fact
+
+            );
+
+        if (!fact) {
+
+            return null;
+
+        }
+
+        return fact;
+
+    }
+
+    // -----------------------------------------------
+
+    // "forget I like football"
+
+    // -----------------------------------------------
+
+    if (
+
+        lower.startsWith(
+
+            "forget "
+
+        )
+
+    ) {
+
+        let fact =
+
+            text.substring(
+
+                "forget ".length
+
+            );
+
+        fact =
+
+            removeEndingPunctuation(
+
+                fact
+
+            );
+
+        if (!fact) {
+
+            return null;
+
+        }
+
+        return fact;
+
+    }
+
+    return null;
 
 }
 
@@ -738,12 +1126,6 @@ async function deleteMemory(
 
     if (!supabase) {
 
-        console.error(
-
-            "Memory delete failed: Supabase is not configured."
-
-        );
-
         return {
 
             success: false,
@@ -758,33 +1140,15 @@ async function deleteMemory(
 
     }
 
-    if (!userId) {
+    const cleanSearch =
 
-        return {
+        removeEndingPunctuation(
 
-            success: false,
+            memoryText
 
-            deletedCount: 0,
+        );
 
-            error: "User ID is missing."
-
-        };
-
-    }
-
-    const cleanText =
-
-        normalizeText(memoryText)
-
-            .replace(
-
-                /[.!?]+$/,
-
-                ""
-
-            );
-
-    if (!cleanText) {
+    if (!userId || !cleanSearch) {
 
         return {
 
@@ -794,7 +1158,7 @@ async function deleteMemory(
 
             error:
 
-                "Memory text is empty."
+                "Missing user or memory."
 
         };
 
@@ -826,7 +1190,7 @@ async function deleteMemory(
 
                 "memory",
 
-                `%${cleanText}%`
+                `%${cleanSearch}%`
 
             )
 
@@ -836,51 +1200,9 @@ async function deleteMemory(
 
             console.error(
 
-                "================================="
+                "MEMORY DELETE ERROR:",
 
-            );
-
-            console.error(
-
-                "MEMORY DELETE ERROR"
-
-            );
-
-            console.error(
-
-                "Code:",
-
-                error.code
-
-            );
-
-            console.error(
-
-                "Message:",
-
-                error.message
-
-            );
-
-            console.error(
-
-                "Details:",
-
-                error.details
-
-            );
-
-            console.error(
-
-                "Hint:",
-
-                error.hint
-
-            );
-
-            console.error(
-
-                "================================="
+                error
 
             );
 
@@ -890,63 +1212,21 @@ async function deleteMemory(
 
                 deletedCount: 0,
 
-                error: error.message
+                error:
+
+                    error.message
 
             };
 
         }
 
-        const deletedCount =
-
-            data?.length || 0;
-
-        console.log(
-
-            "================================="
-
-        );
-
-        console.log(
-
-            "MEMORY DELETE REQUEST"
-
-        );
-
-        console.log(
-
-            "USER ID:",
-
-            userId
-
-        );
-
-        console.log(
-
-            "SEARCH:",
-
-            cleanText
-
-        );
-
-        console.log(
-
-            "DELETED:",
-
-            deletedCount
-
-        );
-
-        console.log(
-
-            "================================="
-
-        );
-
         return {
 
             success: true,
 
-            deletedCount
+            deletedCount:
+
+                data?.length || 0
 
         };
 
@@ -954,7 +1234,7 @@ async function deleteMemory(
 
         console.error(
 
-            "Memory delete exception:",
+            "MEMORY DELETE EXCEPTION:",
 
             error
 
@@ -970,7 +1250,7 @@ async function deleteMemory(
 
                 error?.message ||
 
-                "Unknown delete error."
+                "Unknown error."
 
         };
 
@@ -980,361 +1260,11 @@ async function deleteMemory(
 
 // =====================================================
 
-// EXTRACT REMEMBER REQUEST
-
-// =====================================================
-
-function extractRememberRequest(
-
-    message
-
-) {
-
-    if (!message) {
-
-        return null;
-
-    }
-
-    const text =
-
-        normalizeText(message);
-
-    let match;
-
-    // =================================================
-
-    // Remember my name is Kalidasan
-
-    // =================================================
-
-    match =
-
-        text.match(
-
-            /^remember\s+(?:that\s+)?my\s+name\s+is\s+(.+)$/i
-
-        );
-
-    if (match) {
-
-        const name =
-
-            normalizeText(match[1])
-
-                .replace(
-
-                    /[.!?]+$/,
-
-                    ""
-
-                );
-
-        if (!name) {
-
-            return null;
-
-        }
-
-        return `My name is ${name}.`;
-
-    }
-
-    // =================================================
-
-    // My name is Kalidasan, remember it
-
-    // =================================================
-
-    match =
-
-        text.match(
-
-            /^my\s+name\s+is\s+(.+?),?\s+(?:please\s+)?remember(?:\s+it)?$/i
-
-        );
-
-    if (match) {
-
-        const name =
-
-            normalizeText(match[1])
-
-                .replace(
-
-                    /[.!?]+$/,
-
-                    ""
-
-                );
-
-        if (!name) {
-
-            return null;
-
-        }
-
-        return `My name is ${name}.`;
-
-    }
-
-    // =================================================
-
-    // Please remember that I like football
-
-    // Remember that I like football
-
-    // Remember I like football
-
-    // =================================================
-
-    match =
-
-        text.match(
-
-            /^(?:please\s+)?remember\s+(?:that\s+)?(.+)$/i
-
-        );
-
-    if (match) {
-
-        let fact =
-
-            normalizeText(match[1])
-
-                .replace(
-
-                    /[.!?]+$/,
-
-                    ""
-
-                );
-
-        if (!fact) {
-
-            return null;
-
-        }
-
-        // Remove "it" from accidental:
-
-        // remember I like football it
-
-        fact =
-
-            fact.replace(
-
-                /\s+it$/i,
-
-                ""
-
-            );
-
-        if (!fact) {
-
-            return null;
-
-        }
-
-        return (
-
-            fact.charAt(0).toUpperCase() +
-
-            fact.slice(1) +
-
-            "."
-
-        );
-
-    }
-
-    // =================================================
-
-    // Don't forget that I like Python
-
-    // =================================================
-
-    match =
-
-        text.match(
-
-            /^(?:please\s+)?don't\s+forget\s+(?:that\s+)?(.+)$/i
-
-        );
-
-    if (match) {
-
-        let fact =
-
-            normalizeText(match[1])
-
-                .replace(
-
-                    /[.!?]+$/,
-
-                    ""
-
-                );
-
-        if (!fact) {
-
-            return null;
-
-        }
-
-        return (
-
-            fact.charAt(0).toUpperCase() +
-
-            fact.slice(1) +
-
-            "."
-
-        );
-
-    }
-
-    return null;
-
-}
-
-// =====================================================
-
-// EXTRACT FORGET REQUEST
-
-// =====================================================
-
-function extractForgetRequest(
-
-    message
-
-) {
-
-    if (!message) {
-
-        return null;
-
-    }
-
-    const text =
-
-        normalizeText(message);
-
-    let match;
-
-    // =================================================
-
-    // Forget my name
-
-    // =================================================
-
-    match =
-
-        text.match(
-
-            /^forget\s+my\s+name$/i
-
-        );
-
-    if (match) {
-
-        return "My name";
-
-    }
-
-    // =================================================
-
-    // Forget my birthday
-
-    // =================================================
-
-    match =
-
-        text.match(
-
-            /^forget\s+my\s+(.+)$/i
-
-        );
-
-    if (match) {
-
-        const fact =
-
-            normalizeText(match[1])
-
-                .replace(
-
-                    /[.!?]+$/,
-
-                    ""
-
-                );
-
-        if (!fact) {
-
-            return null;
-
-        }
-
-        return `My ${fact}`;
-
-    }
-
-    // =================================================
-
-    // Forget that I like football
-
-    // Forget I like football
-
-    // =================================================
-
-    match =
-
-        text.match(
-
-            /^forget\s+(?:that\s+)?(.+)$/i
-
-        );
-
-    if (match) {
-
-        const fact =
-
-            normalizeText(match[1])
-
-                .replace(
-
-                    /[.!?]+$/,
-
-                    ""
-
-                );
-
-        if (!fact) {
-
-            return null;
-
-        }
-
-        return fact;
-
-    }
-
-    return null;
-
-}
-
-// =====================================================
-
 // FORMAT MEMORIES
 
 // =====================================================
 
-function formatMemories(
-
-    memories
-
-) {
+function formatMemories(memories) {
 
     if (
 
@@ -1364,7 +1294,7 @@ function formatMemories(
 
 // =====================================================
 
-// HEALTH CHECK
+// HEALTH
 
 // =====================================================
 
@@ -1372,9 +1302,9 @@ app.get(
 
     "/health",
 
-    async (req, res) => {
+    (req, res) => {
 
-        return res.json({
+        res.json({
 
             status: "ok",
 
@@ -1430,15 +1360,15 @@ app.post(
 
             } = req.body;
 
-            // =================================================
+            const cleanMessage =
+
+                cleanText(message);
+
+            // -----------------------------------------------
 
             // VALIDATION
 
-            // =================================================
-
-            const cleanMessage =
-
-                normalizeText(message);
+            // -----------------------------------------------
 
             if (
 
@@ -1494,12 +1424,6 @@ app.post(
 
             }
 
-            // =================================================
-
-            // MEMORY SETTING
-
-            // =================================================
-
             const useMemory =
 
                 memoryEnabled !== false;
@@ -1542,7 +1466,7 @@ app.post(
 
             // =================================================
 
-            // HANDLE REMEMBER
+            // REMEMBER
 
             // =================================================
 
@@ -1566,7 +1490,7 @@ app.post(
 
                     console.log(
 
-                        "REMEMBER REQUEST DETECTED:"
+                        "REMEMBER REQUEST:"
 
                     );
 
@@ -1576,7 +1500,7 @@ app.post(
 
                     );
 
-                    const saveResult =
+                    const result =
 
                         await saveMemory(
 
@@ -1586,19 +1510,9 @@ app.post(
 
                         );
 
-                    // -----------------------------------------
+                    if (result.success) {
 
-                    // SAVE SUCCESS
-
-                    // -----------------------------------------
-
-                    if (
-
-                        saveResult.success
-
-                    ) {
-
-                        const updatedMemories =
+                        const updated =
 
                             await getUserMemories(
 
@@ -1610,15 +1524,15 @@ app.post(
 
                             response:
 
-                                saveResult.alreadyExists
+                                result.alreadyExists
 
-                                    ? `I already remembered that: ${memoryToSave.replace(/\.$/, "")}. 😊`
+                                    ? `I already remembered that: ${removeEndingPunctuation(memoryToSave)}. 😊`
 
-                                    : `Got it! I'll remember that: ${memoryToSave.replace(/\.$/, "")}. 🎉`,
+                                    : `Got it! I'll remember that: ${removeEndingPunctuation(memoryToSave)}. 🎉`,
 
                             memory:
 
-                                updatedMemories
+                                updated
 
                                     .map(
 
@@ -1634,17 +1548,11 @@ app.post(
 
                     }
 
-                    // -----------------------------------------
-
-                    // SAVE FAILED
-
-                    // -----------------------------------------
-
                     console.error(
 
                         "MEMORY SAVE FAILED:",
 
-                        saveResult.error
+                        result.error
 
                     );
 
@@ -1666,7 +1574,7 @@ app.post(
 
             // =================================================
 
-            // HANDLE FORGET
+            // FORGET
 
             // =================================================
 
@@ -1690,7 +1598,7 @@ app.post(
 
                     console.log(
 
-                        "FORGET REQUEST DETECTED:"
+                        "FORGET REQUEST:"
 
                     );
 
@@ -1700,7 +1608,7 @@ app.post(
 
                     );
 
-                    const deleteResult =
+                    const result =
 
                         await deleteMemory(
 
@@ -1710,13 +1618,9 @@ app.post(
 
                         );
 
-                    if (
+                    if (result.success) {
 
-                        deleteResult.success
-
-                    ) {
-
-                        const updatedMemories =
+                        const updated =
 
                             await getUserMemories(
 
@@ -1726,7 +1630,7 @@ app.post(
 
                         if (
 
-                            deleteResult.deletedCount === 0
+                            result.deletedCount === 0
 
                         ) {
 
@@ -1738,7 +1642,7 @@ app.post(
 
                                 memory:
 
-                                    updatedMemories
+                                    updated
 
                                         .map(
 
@@ -1762,7 +1666,7 @@ app.post(
 
                             memory:
 
-                                updatedMemories
+                                updated
 
                                     .map(
 
@@ -1777,14 +1681,6 @@ app.post(
                         });
 
                     }
-
-                    console.error(
-
-                        "MEMORY DELETE FAILED:",
-
-                        deleteResult.error
-
-                    );
 
                     return res
 
@@ -1804,7 +1700,7 @@ app.post(
 
             // =================================================
 
-            // GET SAVED MEMORIES
+            // LOAD MEMORY
 
             // =================================================
 
@@ -1830,21 +1726,9 @@ app.post(
 
                 );
 
-            console.log(
-
-                "SAVED MEMORIES:"
-
-            );
-
-            console.log(
-
-                memories
-
-            );
-
             // =================================================
 
-            // GEMINI CONTENT
+            // GEMINI PARTS
 
             // =================================================
 
@@ -1854,7 +1738,9 @@ app.post(
 
                 parts.push({
 
-                    text: cleanMessage
+                    text:
+
+                        cleanMessage
 
                 });
 
@@ -1868,15 +1754,21 @@ app.post(
 
             if (image) {
 
-                const match =
+                const imagePrefix =
 
-                    image.match(
+                    "data:";
 
-                        /^data:(image\/[^;]+);base64,(.+)$/
+                if (
 
-                    );
+                    typeof image !== "string" ||
 
-                if (!match) {
+                    !image.startsWith(
+
+                        imagePrefix
+
+                    )
+
+                ) {
 
                     return res
 
@@ -1892,17 +1784,91 @@ app.post(
 
                 }
 
+                const commaIndex =
+
+                    image.indexOf(",");
+
+                if (
+
+                    commaIndex === -1
+
+                ) {
+
+                    return res
+
+                        .status(400)
+
+                        .json({
+
+                            response:
+
+                                "Invalid image data."
+
+                        });
+
+                }
+
+                const header =
+
+                    image.substring(
+
+                        5,
+
+                        commaIndex
+
+                    );
+
+                const base64 =
+
+                    image.substring(
+
+                        commaIndex + 1
+
+                    );
+
+                const semicolonIndex =
+
+                    header.indexOf(";");
+
+                if (
+
+                    semicolonIndex === -1
+
+                ) {
+
+                    return res
+
+                        .status(400)
+
+                        .json({
+
+                            response:
+
+                                "Invalid image MIME type."
+
+                        });
+
+                }
+
+                const mimeType =
+
+                    header.substring(
+
+                        0,
+
+                        semicolonIndex
+
+                    );
+
                 parts.push({
 
                     inlineData: {
 
-                        mimeType:
-
-                            match[1],
+                        mimeType,
 
                         data:
 
-                            match[2]
+                            base64
 
                     }
 
@@ -1942,17 +1908,17 @@ ${memoryText}
 
 MEMORY RULES:
 
-- Use saved memories naturally when they are relevant.
+- Use saved memories naturally when relevant.
 
-- If the user's name is present in the saved memories, use it naturally.
+- If the user's name is present, use it naturally.
 
-- If the user's birthday is present in the saved memories, answer birthday questions using that memory.
+- If the user's birthday is present, answer birthday questions using it.
 
-- Never claim you do not know something when it is present in the saved memories.
+- Never claim you do not know something when it exists in saved memories.
 
 - Never invent a memory.
 
-- Never change a saved memory unless the user explicitly asks to change it.
+- Never change a saved memory unless the user explicitly asks.
 
 - Do not expose the internal memory system.
 
@@ -1966,13 +1932,13 @@ MEMORY RULES:
 
 - The server handles explicit remember and forget requests.
 
-- Answer the user's current question normally.
+- Answer the current question normally.
 
 `;
 
             // =================================================
 
-            // GEMINI REQUEST
+            // GEMINI
 
             // =================================================
 
@@ -1988,7 +1954,7 @@ MEMORY RULES:
 
                             role: "user",
 
-                            parts
+                            parts: parts
 
                         }
 
@@ -2014,7 +1980,7 @@ MEMORY RULES:
 
             // =================================================
 
-            // GET RESPONSE
+            // RESPONSE
 
             // =================================================
 
@@ -2024,7 +1990,7 @@ MEMORY RULES:
 
             if (
 
-                !responseText.trim()
+                !cleanText(responseText)
 
             ) {
 
@@ -2036,7 +2002,7 @@ MEMORY RULES:
 
             // =================================================
 
-            // GET FINAL MEMORY
+            // FINAL MEMORY
 
             // =================================================
 
@@ -2068,12 +2034,6 @@ MEMORY RULES:
 
             }
 
-            // =================================================
-
-            // RESPONSE
-
-            // =================================================
-
             return res.json({
 
                 response:
@@ -2096,13 +2056,11 @@ MEMORY RULES:
 
             console.error(
 
-                "MAX AI REQUEST ERROR"
+                "MAX AI ERROR"
 
             );
 
             console.error(
-
-                "Error:",
 
                 error
 
@@ -2110,7 +2068,7 @@ MEMORY RULES:
 
             console.error(
 
-                "Status:",
+                "STATUS:",
 
                 error?.status
 
@@ -2118,7 +2076,7 @@ MEMORY RULES:
 
             console.error(
 
-                "Message:",
+                "MESSAGE:",
 
                 error?.message
 
@@ -2129,12 +2087,6 @@ MEMORY RULES:
                 "================================="
 
             );
-
-            // =================================================
-
-            // RATE LIMIT
-
-            // =================================================
 
             if (
 
@@ -2158,12 +2110,6 @@ MEMORY RULES:
 
             }
 
-            // =================================================
-
-            // AUTH ERROR
-
-            // =================================================
-
             if (
 
                 error?.status === 401 ||
@@ -2186,12 +2132,6 @@ MEMORY RULES:
 
             }
 
-            // =================================================
-
-            // MODEL NOT FOUND
-
-            // =================================================
-
             if (
 
                 error?.status === 404
@@ -2206,17 +2146,11 @@ MEMORY RULES:
 
                         response:
 
-                            `Max AI could not access the Gemini model "${MODEL}". Please check the Gemini API configuration.`
+                            `Max AI could not access the Gemini model ${MODEL}.`
 
                     });
 
             }
-
-            // =================================================
-
-            // OTHER ERROR
-
-            // =================================================
 
             return res
 
@@ -2318,51 +2252,9 @@ app.post(
 
                 console.error(
 
-                    "================================="
+                    "CLEAR MEMORY ERROR:",
 
-                );
-
-                console.error(
-
-                    "CLEAR MEMORY ERROR"
-
-                );
-
-                console.error(
-
-                    "Code:",
-
-                    error.code
-
-                );
-
-                console.error(
-
-                    "Message:",
-
-                    error.message
-
-                );
-
-                console.error(
-
-                    "Details:",
-
-                    error.details
-
-                );
-
-                console.error(
-
-                    "Hint:",
-
-                    error.hint
-
-                );
-
-                console.error(
-
-                    "================================="
+                    error
 
                 );
 
@@ -2384,17 +2276,9 @@ app.post(
 
             console.log(
 
-                "ALL MEMORY CLEARED FOR:",
+                "ALL MEMORY CLEARED:",
 
                 userId
-
-            );
-
-            console.log(
-
-                "DELETED:",
-
-                data?.length || 0
 
             );
 
@@ -2416,7 +2300,7 @@ app.post(
 
             console.error(
 
-                "Clear memory exception:",
+                "CLEAR MEMORY EXCEPTION:",
 
                 error
 
